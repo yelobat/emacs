@@ -39,6 +39,10 @@
 (package! motiongfx
   :recipe (:host github :repo "yelobat/motiongfx.el"))
 
+;; codeforces
+(package! codeforces
+  :recipe (:host github :repo "yelobat/codeforces.el"))
+
 ;; To install SOME-PACKAGE from MELPA, ELPA or emacsmirror:
 ;; (package! some-package)
 
