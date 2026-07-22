@@ -41,18 +41,73 @@
 ;; Make the cursor shorter
 (setq-default cursor-type '(hbar . 4))
 
-;; This determines the style of line numbers in effect. If set to `nil', line
-;; numbers are disabled. For relative line numbers, set this to `relative'.
-;; Doom already enables display-line-numbers-mode in prog/text/conf buffers via
-;; hooks; `global-display-line-numbers-mode' additionally turns it on in special
-;; buffers, and with `relative' every cursor move recomputes all visible
-;; numbers there too -> noticeable lag. Just set the type and let Doom's hooks
-;; scope it.
+(setq jit-lock-defer-time 0.05)
+
+(when (boundp 'pgtk-use-im-context-on-new-connection)
+  (setq pgtk-use-im-context-on-new-connection nil))
+(defun +disable-pgtk-im-context-h (&optional frame)
+  (when (fboundp 'pgtk-use-im-context)
+    (with-selected-frame (or frame (selected-frame))
+      (when (eq (framep (selected-frame)) 'pgtk)
+        (pgtk-use-im-context nil)))))
+(add-hook 'after-make-frame-functions #'+disable-pgtk-im-context-h)
+(+disable-pgtk-im-context-h)
+
+(setq treesit-language-source-alist
+      '((c "https://github.com/tree-sitter/tree-sitter-c")
+        (cpp "https://github.com/tree-sitter/tree-sitter-cpp")))
+(after! treesit
+  (dolist (lang '(c cpp))
+    (unless (treesit-language-available-p lang)
+      (treesit-install-language-grammar lang))))
+
 (setq display-line-numbers-type 'relative)
+
+(run-with-idle-timer
+ 2 nil
+ (lambda ()
+   (ignore-errors
+     (save-window-excursion
+       (let ((buf (eshell)))
+         (when (buffer-live-p buf) (kill-buffer buf)))
+       (dired-noselect "~")))))
 
 ;; If you use `org' and don't want your org files in the default location below,
 ;; change `org-directory'. It must be set before org loads!
 (setq org-directory "~/dotfiles/org")
+
+(after! corfu
+  (setq corfu-auto-delay 0.05
+        corfu-auto-prefix 2))
+
+(after! eglot
+  (setq eglot-events-buffer-config '(:size 0 :format full))
+  (setq read-process-output-max (* 4 1024 1024))
+
+  (setq eglot-sync-connect nil
+        eglot-autoshutdown t
+        eglot-send-changes-idle-time 0.5)
+
+  (setq eglot-ignored-server-capabilities
+        '(:documentHighlightProvider
+          :inlayHintProvider
+          :documentOnTypeFormattingProvider))
+
+  (set-eglot-client! 'c++-ts-mode
+    '("clangd" "--background-index" "-j=8" "--pch-storage=memory"
+      "--header-insertion=never" "--completion-style=detailed" "--malloc-trim"))
+  (set-eglot-client! 'c-ts-mode
+    '("clangd" "--background-index" "-j=8" "--pch-storage=memory"
+      "--header-insertion=never" "--completion-style=detailed" "--malloc-trim"))
+
+  (setq-default eglot-workspace-configuration
+                '(:rust-analyzer
+                  (:check (:workspace :json-false)
+                   :checkOnSave t
+                   :cargo (:targetDir t :buildScripts (:enable t))
+                   :cachePriming (:enable :json-false)
+                   :procMacro (:enable t)
+                   :completion (:limit 50 :autoimport (:enable t))))))
 
 ;; gptel for LLMs
 (use-package! gptel
@@ -85,6 +140,9 @@
 
 ;; Motiongfx
 (use-package! motiongfx)
+
+;; Codeforces
+(use-package! codeforces)
 
 ;; Whenever you reconfigure a package, make sure to wrap your config in an
 ;; `with-eval-after-load' block, otherwise Doom's defaults may override your
